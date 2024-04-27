@@ -61,8 +61,8 @@ export const macroPlugin = async (
   if (opts.preset === "pandacss") {
     defaultFilter = (ident, id) => {
       return (
-        ident === "css" &&
-        id.endsWith("/styled-system/css") &&
+        ["css", "jsx", "patterns", "tokens", "types"].includes(ident) &&
+        !!id.match(/\/styled-system\/{css,jsx,patterns,tokens,types}\Z/g) &&
         (id.startsWith(".") || id.startsWith("~"))
       );
     };
@@ -141,7 +141,11 @@ export const macroPlugin = async (
       });
       const codeBuffer = encoder.encode(code);
       for (const macroLocation of value.removals) {
-        const {lo, hi} = resolveStrPos(codeBuffer, macroLocation.lo, macroLocation.hi)
+        const { lo, hi } = resolveStrPos(
+          codeBuffer,
+          macroLocation.lo,
+          macroLocation.hi
+        );
         s.remove(lo, hi);
       }
       for (const macroLocation of value.replaces) {
@@ -150,9 +154,12 @@ export const macroPlugin = async (
           const module = await runner.executeId(resolved.id);
           const macroFunc = module[macroLocation.import_name];
           if (macroFunc) {
-            const {lo, hi} = resolveStrPos(codeBuffer, macroLocation.lo, macroLocation.hi)
-            const wrapperStr =
-              "return " + s.slice(lo, hi);
+            const { lo, hi } = resolveStrPos(
+              codeBuffer,
+              macroLocation.lo,
+              macroLocation.hi
+            );
+            const wrapperStr = "return " + s.slice(lo, hi);
             const macroWrapper = new Function(
               macroLocation.import_name,
               wrapperStr
@@ -175,4 +182,4 @@ const resolveStrPos = (code: Uint8Array, lo: number, hi: number) => {
   const normalizedLo = decoder.decode(code.slice(0, lo)).length;
   const normalizedHi = normalizedLo + decoder.decode(code.slice(lo, hi)).length;
   return { lo: normalizedLo, hi: normalizedHi };
-}
+};
